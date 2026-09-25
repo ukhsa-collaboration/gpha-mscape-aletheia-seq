@@ -151,6 +151,7 @@ class BlastDetails(BaseModel):
     @model_validator(mode="after")
     def validate_filter_expressions(self):
         filter_list = self.filters
+        parsed_filters = []
         for filt in filter_list:
             try:
                 parsed_equation = ast.parse(filt, mode="eval")
@@ -160,10 +161,19 @@ class BlastDetails(BaseModel):
                 if isinstance(node, ast.Call | ast.Attribute):
                     raise ValueError(f"Function calls and Attribute access are not supported: {ast.unparse(node)}")
 
-            if not isinstance(parsed_equation.body, ast.Compare):
-                raise ValueError(f"Expected a comparison to filter blast results: {filt}")
-            elif len(parsed_equation.body.ops) > 1 or len(parsed_equation.body.comparators) > 1:
-                raise ValueError(f"Chained comparisons are not supported: {filt}")
+            if isinstance(parsed_equation.body, ast.BinOp) and isinstance(
+                parsed_equation.body.op, ast.BitOr | ast.BitAnd
+            ):
+                # this means there is | or & in the filter so both sides of the filter need to be processed
+                parsed_filters += [parsed_equation.left, parsed_equation.right]
+            else:
+                parsed_filters.append(parsed_equation.body)
+
+        for equation in parsed_filters:
+            if not isinstance(equation, ast.Compare):
+                raise ValueError(f"Expected a comparison to filter blast results: {ast.unparse(equation)}")
+            elif len(equation.ops) > 1 or len(equation.comparators) > 1:
+                raise ValueError(f"Chained comparisons are not supported: {ast.unparse(equation)}")
             else:
                 allowed_operators = (
                     ast.Eq,
@@ -174,15 +184,15 @@ class BlastDetails(BaseModel):
                     ast.GtE,
                 )
 
-                operator = parsed_equation.body.ops[0]
+                operator = equation.ops[0]
                 if not isinstance(operator, allowed_operators):
                     raise ValueError(
                         f"Unsupported operator in blast filter: {type(operator).__name__}. "
                         "Allowed operators are ==, !=, <, <=, >, >="
                     )
 
-                left = parsed_equation.body.left
-                right = parsed_equation.body.comparators[0]
+                left = equation.left
+                right = equation.comparators[0]
 
                 at_least_one_column_left = self.process_equation_side(left)
                 at_least_one_column_right = self.process_equation_side(right)

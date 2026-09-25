@@ -129,7 +129,7 @@ tests for argparse
 
 def test_argument_parser_constructs():
     parser = aletheiaseq_commandline.argument_parser()
-    assert parser.prog == "AletheiaSeq"
+    assert parser.prog == "aletheiaseq"
 
 
 @pytest.mark.parametrize("missing_arg", ["--yaml", "--outfolder"])
