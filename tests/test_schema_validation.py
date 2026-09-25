@@ -233,6 +233,7 @@ Should pass
         "length >= ((slen + qlen) / 2)",
         "evalue <= 1e-10",
         "bitscore >= -10",
+        "(length <= slen) | (length >= (0.8 * slen))",
     ],
 )
 def test_valid_filter_expressions(valid_blast_details, filter_expression):

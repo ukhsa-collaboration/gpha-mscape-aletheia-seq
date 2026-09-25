@@ -165,7 +165,7 @@ class BlastDetails(BaseModel):
                 parsed_equation.body.op, ast.BitOr | ast.BitAnd
             ):
                 # this means there is | or & in the filter so both sides of the filter need to be processed
-                parsed_filters += [parsed_equation.left, parsed_equation.right]
+                parsed_filters += [parsed_equation.body.left, parsed_equation.body.right]
             else:
                 parsed_filters.append(parsed_equation.body)
 
